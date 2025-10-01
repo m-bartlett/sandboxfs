@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
-
 #include "sandbox.h"
 #include "util.h"
+
 
 #include <sched.h>
 #include <sys/mount.h>
@@ -34,10 +34,11 @@ static const uint mount_template_max_size = sizeof(SANDBOX_MOUNT_PATH_TEMPLATE"/
 // TODO: user bind mounts
 // TODO: --force flag to make base dir?
 
-int create_sandbox(const char* mount_name,
-                   const char* mount_base_path,
-                   const char* source_path,
-                   const char* command) {
+int create_sandbox(const char*  mount_name,
+                   const char*  mount_base_path,
+                   const char*  source_path,
+                   const char** bind_paths,
+                   const char*  command) {
     validate_directory(mount_base_path);
     validate_directory(source_path);
 
@@ -78,6 +79,17 @@ int create_sandbox(const char* mount_name,
             mount_safe(m.source, path_buffer, m.type, m.flags, (void*)m.data);
         }
 
+        if (bind_paths != NULL) {
+            const char* bind_path;
+            uint bind_idx=0;
+            while ((bind_path = bind_paths[bind_idx++]) != NULL) {
+                char* absolute_path = realpath(bind_path, NULL);
+                char* sandboxed_path = string_concat(g_mount_point, "", absolute_path);
+                mount_safe(absolute_path, sandboxed_path, NULL, MS_SLAVE|MS_BIND|MS_REC, NULL);
+                free(absolute_path);
+            }
+        }
+
         const char *pwd = getcwd(NULL, 0);
         chdir_safe(g_mount_point);
         chroot_safe(g_mount_point);
@@ -86,7 +98,6 @@ int create_sandbox(const char* mount_name,
         // Hide overlay mount path from within itself
         mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, "mode=1755");
                                                                 //TODO NULL options ^
-
         // Shed privileges before exec
         seteuid_safe(getuid());
         setegid_safe(getgid());
