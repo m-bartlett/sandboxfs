@@ -3,9 +3,8 @@ CC = gcc
 CFLAGS = -Wall -Wextra -O3
 LDFLAGS =
 MAKEFILE := $(firstword $(MAKEFILE_LIST))
+MAKEFLAGS += --no-builtin-rules
 
-
-# Binary name and installation path
 BINARY = sandboxfs
 PREFIX ?= /usr/local
 BINPREFIX  = $(PREFIX)/bin
@@ -24,34 +23,31 @@ HEADERS      := $(filter-out main% test-%, $(wildcard *.h))
 
 all: $(BINARY)
 
-$(OBJECTS): $(SOURCE_FILES) $(HEADERS) $(MAKEFILE)
+print:
+	@echo "$(BINARY)"
+	@echo "$(OBJECTS)"
+	@echo "$(SOURCE_FILES)"
+	@echo "$(HEADERS)"
+
 
 $(BINARY): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-	sudo chown root:root $(BINARY)
-	sudo chmod 4755 $(BINARY)
+
+$(OBJECTS): $(SOURCE_FILES) $(HEADERS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+install:
+	install --owner=root --group=root --mode=4755 $(BINARY) $(INSTALL_TARGET)
 
 install-local: $(BINARY)
-	install --owner=root --group=root --mode=4755 --preserve-timestamps $(BINARY) ./bin/
+	chown root:root $(BINARY)
+	chmod 4755 $(BINARY)
 
 
-%.o: %.c %.h
-	@$(CC) $(CFLAGS) -c $< -o $@
 
-
-# Install the binary with setuid bit
-install: $(BINARY)
-	@echo "Installing $(BINARY) to $(INSTALL_DIR)..."
-	@if [ "$$(id -u)" != "0" ]; then \
-		echo "Error: Installation requires root privileges"; \
-		echo "Please run 'sudo make install'"; \
-		exit 1; \
-	fi
-	install -m 0755 $(BINARY) $(INSTALL_DIR)
-	chown root:root $(INSTALL_DIR)/$(BINARY)
-	chmod u+s $(INSTALL_DIR)/$(BINARY)
-	@echo "Installation complete. $(BINARY) installed as setuid root."
-	@echo "SECURITY NOTE: Please review the code and ensure this is appropriate for your environment."
 
 # Uninstall the binary
 uninstall:
@@ -66,7 +62,7 @@ uninstall:
 
 # Clean build files
 clean:
-	rm -f $(BINARY) $(OBJECTS)
+	@rm -fv $(BINARY) $(OBJECTS)
 
 # Help information
 help:
