@@ -42,16 +42,6 @@ int create_sandbox(const char*  mount_name,
 
     //malloc mount_point on heap so cleanup fubctions have access to it.
     g_mount_point = auto_sprintf(SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, "");
-    const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
-    const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
-                                                      source_path, mount_work_dir);
-    mkdir_for_caller(g_mount_point);
-    mkdir_for_caller(mount_work_dir);
-    mount_safe(mount_name,
-               g_mount_point,
-               "overlay",
-               MS_LAZYTIME | MS_NOATIME | MS_NODIRATIME,
-               (void*)overlay_options);
 
     g_sandbox_pid = fork();
 
@@ -65,6 +55,18 @@ int create_sandbox(const char*  mount_name,
         }
 
         mount_safe(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
+
+        const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
+        const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
+                                                          source_path, mount_work_dir);
+        mkdir_for_caller(g_mount_point);
+        mkdir_for_caller(mount_work_dir);
+        mount_safe(mount_name,
+                   g_mount_point,
+                   "overlay",
+                   MS_LAZYTIME | MS_NOATIME | MS_NODIRATIME,
+                   (void*)overlay_options);
+
 
         const uint max_path_size = (mount_template_max_size + strlen(mount_base_path));
         char path_buffer[max_path_size];
