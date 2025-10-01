@@ -40,13 +40,6 @@ static void signal_handler(int sig) {
     raise(sig);
 }
 
-/* TODO:
- --bind/-b flag for verbatim mount paths
- --new-tmp ? Bind current /tmp
- Do we really need to expose the overlay mount? Possibly--for reading the upper/lower dirs
- Check it / inode != 2, print mount info. Nsenter the proc ID somehow?
-*/
-
 
 int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;

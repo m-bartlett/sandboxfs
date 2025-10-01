@@ -31,8 +31,6 @@ static const mount_t sandbox_mounts[] = {
 };
 static const uint mount_template_max_size = sizeof(SANDBOX_MOUNT_PATH_TEMPLATE"/dev/shm");
 
-// TODO: user bind mounts
-// TODO: --force flag to make base dir?
 
 int create_sandbox(const char*  mount_name,
                    const char*  mount_base_path,
