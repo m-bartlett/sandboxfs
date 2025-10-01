@@ -1,27 +1,55 @@
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include "args.h"
+#include "sandbox.h"
 #include "util.h"
-#include "mount.h"
 
-bool g_verbose;
+#include <pwd.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+
+bool g_verbose = false;
+bool g_source_is_ephemeral = false;
+const char* g_mount_base_path;
+
 
 static Arguments arguments = { NULL };
 
-void signal_handler(int sig) {
-    fprintf(stderr, "\nReceived signal %d, cleaning up...\n", sig);
-    // cleanup();
+static void cleanup() {
+    bool sandbox_unmounted = cleanup_sandbox();
+    if (g_source_is_ephemeral) {
+        if (g_verbose) {
+            printf("Deleting ephemeral source directory %s\n", arguments.source_path);
+        }
+        remove_directory_recursive(arguments.source_path);
+        free((void*)arguments.source_path);
+    }
+    if (sandbox_unmounted) {
+        if (g_verbose) {
+            printf("Deleting mount base directory %s\n", g_mount_base_path);
+        }
+        remove_directory_recursive(g_mount_base_path);
+        free((void*)g_mount_base_path);
+    }
+}
+
+static void signal_handler(int sig) {
+    eprintf("\nReceived signal %d, cleaning up...\n", sig);
+    cleanup();
     signal(sig, SIG_DFL);
     raise(sig);
 }
 
+/* TODO:
+ --bind/-b flag for verbatim mount paths
+ --new-tmp ? Bind current /tmp
+ Do we really need to expose the overlay mount? Possibly--for reading the upper/lower dirs
+ Check it / inode != 2, print mount info. Nsenter the proc ID somehow?
+*/
+
 
 int main(int argc, char *argv[]) {
-    bool source_is_ephemeral = false;
+    if (detect_sandbox()) return EXIT_SUCCESS;
 
     if (geteuid() != 0) {
         fail("ERROR: " APP_NAME
@@ -36,134 +64,56 @@ int main(int argc, char *argv[]) {
         arguments.mount_id = current_timestamp();
     }
 
-    const char* mount_base_path = auto_sprintf(APP_BASE_DIR "/%s", arguments.mount_id);
+    if (arguments.command == NULL) {
+        const pid_t uid = getuid();
+        struct passwd *pw = getpwuid(uid);
+        if (pw == NULL) {
+            fail("Error getting password entry for current user ID %d: %s\n", uid, strerror(errno));
+        }
+        if (pw->pw_shell == NULL) {
+            fail("Command argument not provided and user's default shell undefined.");
+        }
+        arguments.command = pw->pw_shell;
+    }
+
+    g_mount_base_path = auto_sprintf(APP_BASE_DIR "/%s", arguments.mount_id);
     mkdir_for_root(APP_BASE_DIR);
-    mkdir_for_root(mount_base_path);
+    mkdir_for_root(g_mount_base_path);
 
     if (arguments.source_path == NULL) {
-        arguments.source_path = auto_sprintf("%s/delta", mount_base_path);
-        source_is_ephemeral = true;
+        arguments.source_path = (const char*)auto_sprintf("%s/delta", g_mount_base_path);
+        g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
     }
 
     if (g_verbose) {
-        eprintf("Mount ID: %s\n",          arguments.mount_id);
-        eprintf("Mount base path: %s\n",   mount_base_path);
-        eprintf("Source path: %s%s\n",
-                arguments.source_path, (source_is_ephemeral ? " (ephemeral)" : ""));
-        eprintf("Command: %s\n",           arguments.command);
-        eprintf("List mode: %s\n",         arguments.list ? "true" : "false");
-        eprintf("uid:%d gid:%d euid:%d egid:%d\n", getuid(), getgid(), geteuid(), getegid());
+        printf("Mount ID: %s\n",          arguments.mount_id);
+        printf("Command: %s\n",           arguments.command);
+        printf("Mount base path: %s\n",   g_mount_base_path);
+        printf("Source path: %s%s\n",
+                arguments.source_path, (g_source_is_ephemeral ? " (ephemeral)" : ""));
     }
 
     validate_directory(arguments.source_path);
-    validate_directory(mount_base_path);
+    validate_directory(g_mount_base_path);
 
-    const char* mount_name = auto_sprintf(APP_NAME "-%s", arguments.mount_id);
-    create_sandbox_mounts(mount_name, mount_base_path, arguments.source_path);
+    const char* mount_name = auto_sprintf_stack(APP_NAME "-%s", arguments.mount_id);
 
-    // atexit(cleanup);
+    // Ensure mount/directory cleanup still happens on unexpected exit.
+    atexit(cleanup);
+    signal(SIGINT,  signal_handler);
+    signal(SIGTERM, signal_handler);
+    signal(SIGHUP,  signal_handler);
+    signal(SIGQUIT, signal_handler);
 
-    // signal(SIGINT,  signal_handler);
-    // signal(SIGTERM, signal_handler);
-    // signal(SIGHUP,  signal_handler);
-    // signal(SIGQUIT, signal_handler);
+    int status = create_sandbox(mount_name,
+                                g_mount_base_path,
+                                arguments.source_path,
+                                arguments.command);
 
-    // uid_t real_uid = getuid();
-    // uid_t effective_uid = geteuid();
-
-
-
-    /*pid_t pid = fork();
-
-    if (pid == -1) {
-        fprintf(stderr, "Failed to fork process: %s\n", strerror(errno));
-        return EXIT_FAILURE;
-    }
-    else if (pid == 0) {
-        printf("Creating new mount namespace\n");
-        if (unshare(CLONE_NEWNS) != 0) {
-            fprintf(stderr, "Failed to create new namespace: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        // Make all mounts private to avoid affecting the parent namespace
-        if (mount("none", "/", NULL, MS_REC | MS_PRIVATE, NULL) != 0) {
-            fprintf(stderr, "Failed to make mounts private: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        // Setup the chroot environment with essential mounts
-        if (prepare_chroot_env(mount_point) != 0) {
-            fprintf(stderr, "Failed to prepare chroot environment\n");
-            exit(EXIT_FAILURE);
-        }
-
-        printf("Changing root to: %s\n", mount_point);
-
-        // Change to the new root directory
-        if (chdir(mount_point) != 0) {
-            fprintf(stderr, "Failed to change directory to %s: %s\n", mount_point, strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        // Change the root
-        if (chroot(mount_point) != 0) {
-            fprintf(stderr, "Failed to change root: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        // Change to root directory inside the new root
-        if (chdir("/") != 0) {
-            fprintf(stderr, "Failed to change directory inside chroot: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
-        }
-
-        printf("Executing %s in the new namespace\n", command);
-
-        // Prepare arguments for the command
-        char *exec_args[64] = {command, NULL}; // Start with just the command
-        int arg_count = 1;
-
-        // Add additional arguments if specified
-        if (command_args) {
-            char *arg_copy = strdup(command_args);
-            char *arg = strtok(arg_copy, " ");
-            while (arg != NULL && arg_count < 63) {
-                exec_args[arg_count++] = arg;
-                arg = strtok(NULL, " ");
-            }
-            exec_args[arg_count] = NULL;
-        }
-
-        // Drop privileges back to the original user if running setuid
-        if (real_uid != effective_uid) {
-            printf("Dropping privileges from UID %d to UID %d\n", effective_uid, real_uid);
-            if (setuid(real_uid) != 0) {
-                fprintf(stderr, "Warning: Failed to drop privileges: %s\n", strerror(errno));
-            }
-        }
-
-        // Execute the command
-        execvp(command, exec_args);
-
-        // If we get here, exec failed
-        fprintf(stderr, "Failed to execute %s: %s\n", command, strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-    else {
-        // Parent process
-        g_child_pid = pid;
-
-        // Wait for child to finish
-        int status;
-        waitpid(pid, &status, 0);
-
+    if (g_verbose) {
         printf("Command exited with status: %d\n", WEXITSTATUS(status));
-
-        // Cleanup happens automatically through atexit handler
-        return WEXITSTATUS(status);
     }
-*/
-    return EXIT_SUCCESS;
+
+    return status;
 }
