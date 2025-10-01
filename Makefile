@@ -1,7 +1,9 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O3
 LDFLAGS =
+MAKEFILE := $(firstword $(MAKEFILE_LIST))
+
 
 # Binary name and installation path
 BINARY = sandboxfs
@@ -11,28 +13,31 @@ INSTALL_TARGET := $(addprefix $(BINPREFIX)/,$(BINARY))
 
 # SOURCE_DIR := src
 # SOURCE_FILES := $(shell find $(SOURCE_DIR) -type f -name '*.c')
-SOURCE_FILES := $(wildcard *.c)
+SOURCE_FILES := $(filter-out test-%, $(wildcard *.c))
 OBJECTS      := $(SOURCE_FILES:.c=.o)
-HEADERS      := $(SOURCE_FILES:.c=.h)
+HEADERS      := $(filter-out main% test-%, $(wildcard *.h))
 
 # LIBS :=
 # LINK_LIBS :=
 # LDFLAGS := $(shell pkg-config --libs $(LIBS)) $(addprefix -l, $(LINK_LIBS))
 # CFLAGS := $(shell pkg-config --cflags $(LIBS))
 
-# Default target
 all: $(BINARY)
 
-# Compile the binary
+$(OBJECTS): $(SOURCE_FILES) $(HEADERS) $(MAKEFILE)
+
 $(BINARY): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	sudo chown root:root $(BINARY)
+	sudo chmod 4755 $(BINARY)
 
 install-local: $(BINARY)
 	install --owner=root --group=root --mode=4755 --preserve-timestamps $(BINARY) ./bin/
 
-# Compile object files
+
 %.o: %.c %.h
 	@$(CC) $(CFLAGS) -c $< -o $@
+
 
 # Install the binary with setuid bit
 install: $(BINARY)
