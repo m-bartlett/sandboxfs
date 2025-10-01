@@ -10,17 +10,13 @@ F('s', "source", source_path, 1, const char*, PATH,\
   "Path to directory to overlay on top of root filesystem (defaults to ephemeral temporary dir)") \
 \
 F('c', "cmd", command, 1, const char*, PATH,\
-  "Path to executable command") \
-\
-F('L', "list", list, 0, bool, , \
-  "List mode (flag, defaults to false)") \
+  "Path to executable command (Defaults to user's preferred shell).") \
 \
 F('v', "verbose", verbose, 0, bool, , "Display extra information")
 
 
-
 #define STRUCT_ITEM(short, long, var, has_arg, type, arg, help) type var;
-typedef struct {ARGUMENT_LIST(STRUCT_ITEM) ;} Arguments;
+typedef struct { ARGUMENT_LIST(STRUCT_ITEM) } Arguments;
 #undef STRUCT_ITEM
 
 void parse_args(int argc, char *argv[], Arguments *arguments);
