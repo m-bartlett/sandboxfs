@@ -1,15 +1,26 @@
 #include <stdbool.h>
+#include <getopt.h>
 
+/* short_flag, long_flag, var_name, has_arg, arg_type, arg_val_name, help */
 #define ARGUMENT_LIST(F) \
-    F('l', lower,   1, const char*, PATHS, "Comma-separated list of lower directory paths") \
-    F('u', upper,   1, const char*, PATHS, "Comma-separated list of upper directory paths") \
-    F('w', work,    1, const char*, PATH,  "Working directory path") \
-    F('c', command, 1, const char*, PATH,  "Path to executable command") \
-    F('L', list,    0, bool,        ,      "List mode (flag, defaults to false)") \
-    F('v', verbose, 0, bool,        ,      "Display extra information")
+F('i', "id", mount_id, 1, const char*, MOUNT_ID,\
+  "Mount ID (defaults to current timestamp)") \
+\
+F('s', "source", source_path, 1, const char*, PATH,\
+  "Path to directory to overlay on top of root filesystem (defaults to ephemeral temporary dir)") \
+\
+F('c', "cmd", command, 1, const char*, PATH,\
+  "Path to executable command") \
+\
+F('L', "list", list, 0, bool, , \
+  "List mode (flag, defaults to false)") \
+\
+F('v', "verbose", verbose, 0, bool, , "Display extra information")
 
-#define STRUCT_ITEM(short, long, has_arg, type, arg_name, help) type long;
-typedef struct { ARGUMENT_LIST(STRUCT_ITEM) } Arguments;
+
+
+#define STRUCT_ITEM(short, long, var, has_arg, type, arg, help) type var;
+typedef struct {ARGUMENT_LIST(STRUCT_ITEM) ;} Arguments;
 #undef STRUCT_ITEM
 
 void parse_args(int argc, char *argv[], Arguments *arguments);
