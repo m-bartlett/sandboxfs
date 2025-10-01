@@ -39,7 +39,7 @@ $(OBJECTS): $(SOURCE_FILES) $(HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
-install:
+install: $(BINARY)
 	install --owner=root --group=root --mode=4755 $(BINARY) $(INSTALL_TARGET)
 
 install-local: $(BINARY)

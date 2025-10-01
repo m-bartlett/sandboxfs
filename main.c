@@ -76,12 +76,21 @@ int main(int argc, char *argv[]) {
         arguments.command = pw->pw_shell;
     }
 
+    if (arguments.binds != NULL) {
+        const char* bind_path;
+        uint bind_idx=0;
+        while ((bind_path = arguments.binds[bind_idx++]) != NULL) {
+            validate_directory(bind_path);
+        }
+    }
+
+
     g_mount_base_path = auto_sprintf(APP_BASE_DIR "/%s", arguments.mount_id);
     mkdir_for_root(APP_BASE_DIR);
     mkdir_for_root(g_mount_base_path);
 
     if (arguments.source_path == NULL) {
-        arguments.source_path = (const char*)auto_sprintf("%s/delta", g_mount_base_path);
+        arguments.source_path = auto_sprintf("%s/delta", g_mount_base_path);
         g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
     }
@@ -90,8 +99,19 @@ int main(int argc, char *argv[]) {
         printf("Mount ID: %s\n",          arguments.mount_id);
         printf("Command: %s\n",           arguments.command);
         printf("Mount base path: %s\n",   g_mount_base_path);
-        printf("Source path: %s%s\n",
-                arguments.source_path, (g_source_is_ephemeral ? " (ephemeral)" : ""));
+        printf("Source path: %s", arguments.source_path);
+        printf("%s\n", g_source_is_ephemeral ? " (ephemeral)" : "");
+        if (arguments.binds != NULL) {
+            printf("Additional bind mounts:");
+            const char* bind = NULL;
+            uint bind_idx=0;
+            while ((bind = arguments.binds[bind_idx++]) != NULL) {
+                bind = realpath(bind, NULL);
+                printf(" %s", bind);
+                free((void*)bind);
+            }
+            printf("\n");
+        }
     }
 
     validate_directory(arguments.source_path);
@@ -109,6 +129,7 @@ int main(int argc, char *argv[]) {
     int status = create_sandbox(mount_name,
                                 g_mount_base_path,
                                 arguments.source_path,
+                                arguments.binds,
                                 arguments.command);
 
     if (g_verbose) {
