@@ -13,7 +13,7 @@ bool g_source_is_ephemeral = false;
 const char* g_mount_base_path;
 
 
-static Arguments arguments = { NULL };
+static argument_t arguments = { NULL };
 
 static void cleanup() {
     bool cleanup_success = cleanup_sandbox();

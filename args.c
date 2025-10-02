@@ -78,7 +78,7 @@ static const char** parse_multiple_arg_values(int argc, char *argv[]) {
 #define PARSE_CASE(short, long, var, has_arg, type, arg, help) \
     case short : arguments->var = CASE_##has_arg; break;
 
-void parse_args(int argc, char *argv[], Arguments *arguments) {
+void parse_args(int argc, char *argv[], argument_t *arguments) {
     int option_index = 0;
     int c;
 

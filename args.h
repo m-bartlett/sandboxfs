@@ -19,7 +19,7 @@ F('v', "verbose", verbose, ARG_NONE, bool, , "Display extra information")
 
 
 #define STRUCT_ITEM(short, long, var, has_arg, type, arg, help) type var;
-typedef struct { ARGUMENT_LIST(STRUCT_ITEM) } Arguments;
+typedef struct { ARGUMENT_LIST(STRUCT_ITEM) } argument_t;
 #undef STRUCT_ITEM
 
-void parse_args(int argc, char *argv[], Arguments *arguments);
+void parse_args(int argc, char *argv[], argument_t *arguments);
