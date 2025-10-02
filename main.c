@@ -87,6 +87,9 @@ int main(int argc, char *argv[]) {
         g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
     }
+    else {
+        arguments.source_path = realpath(arguments.source_path, NULL);
+    }
 
     if (g_verbose) {
         printf("Mount ID: %s\n",          arguments.mount_id);
