@@ -1,6 +1,4 @@
 #include "util.h"
-#include <stdlib.h>
-#include <stdnoreturn.h>
 #include "args.h"
 
 #define ARG_NONE     no_argument

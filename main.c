@@ -18,7 +18,6 @@ static Arguments arguments = { NULL };
 static void cleanup() {
     bool cleanup_success = cleanup_sandbox();
 
-
     if (cleanup_success) {
         remove_directory_recursive(g_mount_base_path);
         if (g_verbose) {
