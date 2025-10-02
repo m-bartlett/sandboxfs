@@ -31,8 +31,6 @@ static const mount_t sandbox_mounts[] = {
 };
 static const uint mount_template_max_size = sizeof(SANDBOX_MOUNT_PATH_TEMPLATE"/dev/shm");
 
-// TODO: user bind mounts
-// TODO: --force flag to make base dir?
 
 int create_sandbox(const char*  mount_name,
                    const char*  mount_base_path,
@@ -44,16 +42,6 @@ int create_sandbox(const char*  mount_name,
 
     //malloc mount_point on heap so cleanup fubctions have access to it.
     g_mount_point = auto_sprintf(SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, "");
-    const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
-    const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
-                                                      source_path, mount_work_dir);
-    mkdir_for_caller(g_mount_point);
-    mkdir_for_caller(mount_work_dir);
-    mount_safe(mount_name,
-               g_mount_point,
-               "overlay",
-               MS_LAZYTIME | MS_NOATIME | MS_NODIRATIME,
-               (void*)overlay_options);
 
     g_sandbox_pid = fork();
 
@@ -67,6 +55,18 @@ int create_sandbox(const char*  mount_name,
         }
 
         mount_safe(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
+
+        const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
+        const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
+                                                          source_path, mount_work_dir);
+        mkdir_for_caller(g_mount_point);
+        mkdir_for_caller(mount_work_dir);
+        mount_safe(mount_name,
+                   g_mount_point,
+                   "overlay",
+                   MS_LAZYTIME | MS_NOATIME | MS_NODIRATIME,
+                   (void*)overlay_options);
+
 
         const uint max_path_size = (mount_template_max_size + strlen(mount_base_path));
         char path_buffer[max_path_size];
@@ -125,27 +125,24 @@ int create_sandbox(const char*  mount_name,
 
 
 bool cleanup_sandbox() {
-    bool unmount_successful = false;
+    bool cleanup_success = true;
 
     if (g_sandbox_pid > 0) { // Parent cleanup
         kill(g_sandbox_pid, SIGTERM);
 
         if (g_mount_point != NULL) {
-            if (umount2(g_mount_point, 0) == -1) {
-                eprintf("Failed to unmount %s: %s\n", g_mount_point, strerror(errno));
-            }
-            else {
-                unmount_successful = true;
-                if (g_verbose) printf("Unmounted %s\n", g_mount_point);
-            }
+            // mount shouldn't be visible to parent, but doesn't hurt to make sure it's unmounted
+            umount2(g_mount_point, 0);
             free(g_mount_point);
         }
     }
     else { // child cleanup
+        // This block is only reached if an error prevents getting to the exec call
+        free(g_mount_point);
         exit(EXIT_FAILURE);
     }
 
-    return unmount_successful;
+    return cleanup_success;
 }
 
 

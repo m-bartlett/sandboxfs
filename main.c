@@ -16,21 +16,20 @@ const char* g_mount_base_path;
 static Arguments arguments = { NULL };
 
 static void cleanup() {
-    bool sandbox_unmounted = cleanup_sandbox();
-    if (g_source_is_ephemeral) {
-        if (g_verbose) {
-            printf("Deleting ephemeral source directory %s\n", arguments.source_path);
-        }
-        remove_directory_recursive(arguments.source_path);
-        free((void*)arguments.source_path);
-    }
-    if (sandbox_unmounted) {
-        if (g_verbose) {
-            printf("Deleting mount base directory %s\n", g_mount_base_path);
-        }
+    bool cleanup_success = cleanup_sandbox();
+
+    if (cleanup_success) {
         remove_directory_recursive(g_mount_base_path);
-        free((void*)g_mount_base_path);
+        if (g_verbose) {
+            printf("Successfully removed mount staging directory %s\n", g_mount_base_path);
+        }
     }
+    else {
+        eprintf("Sandbox cleanup failed, skipping base directory removal %s\n", g_mount_base_path);
+    }
+
+    free((void*)arguments.source_path); // manual path or from realpath(), free in any case
+    free((void*)g_mount_base_path);
 }
 
 static void signal_handler(int sig) {
@@ -40,20 +39,12 @@ static void signal_handler(int sig) {
     raise(sig);
 }
 
-/* TODO:
- --bind/-b flag for verbatim mount paths
- --new-tmp ? Bind current /tmp
- Do we really need to expose the overlay mount? Possibly--for reading the upper/lower dirs
- Check it / inode != 2, print mount info. Nsenter the proc ID somehow?
-*/
-
 
 int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;
 
     if (geteuid() != 0) {
-        fail("ERROR: " APP_NAME
-             " does not have elevated privileges (required for mount operations).\n"
+        fail("FATAL: "APP_NAME" does not have elevated privileges required for mount operations.\n"
              "Executable should be owned by root with setuid bit enabed.\n")
     }
 
@@ -90,9 +81,12 @@ int main(int argc, char *argv[]) {
     mkdir_for_root(g_mount_base_path);
 
     if (arguments.source_path == NULL) {
-        arguments.source_path = auto_sprintf("%s/delta", g_mount_base_path);
+        arguments.source_path = auto_sprintf("%s/" EPHEMERAL_SOURCE_DIR_NAME, g_mount_base_path);
         g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
+    }
+    else {
+        arguments.source_path = realpath(arguments.source_path, NULL);
     }
 
     if (g_verbose) {
@@ -100,7 +94,15 @@ int main(int argc, char *argv[]) {
         printf("Command: %s\n",           arguments.command);
         printf("Mount base path: %s\n",   g_mount_base_path);
         printf("Source path: %s", arguments.source_path);
-        printf("%s\n", g_source_is_ephemeral ? " (ephemeral)" : "");
+        if (g_source_is_ephemeral) {
+            puts(" (ephemeral)");
+            printf("\nEphemeral source directory created for this sandbox: %s\n"
+                   "It will be deleted automatically when this sandbox exits.\n"
+                   "Copy it outside of the staging directory %s before the sandbox terminates to"
+                   " preserve any filesystem mutations from within the sandbox.\n\n",
+                   arguments.source_path, g_mount_base_path);
+        }
+        else puts("");
         if (arguments.binds != NULL) {
             printf("Additional bind mounts:");
             const char* bind = NULL;
