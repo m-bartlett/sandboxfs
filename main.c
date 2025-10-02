@@ -16,21 +16,21 @@ const char* g_mount_base_path;
 static Arguments arguments = { NULL };
 
 static void cleanup() {
-    bool sandbox_unmounted = cleanup_sandbox();
-    if (g_source_is_ephemeral) {
-        if (g_verbose) {
-            printf("Deleting ephemeral source directory %s\n", arguments.source_path);
-        }
-        remove_directory_recursive(arguments.source_path);
-        free((void*)arguments.source_path);
-    }
-    if (sandbox_unmounted) {
-        if (g_verbose) {
-            printf("Deleting mount base directory %s\n", g_mount_base_path);
-        }
+    bool cleanup_success = cleanup_sandbox();
+
+
+    if (cleanup_success) {
         remove_directory_recursive(g_mount_base_path);
-        free((void*)g_mount_base_path);
+        if (g_verbose) {
+            printf("Successfully removed mount staging directory %s\n", g_mount_base_path);
+        }
     }
+    else {
+        eprintf("Sandbox cleanup failed, skipping base directory removal %s\n", g_mount_base_path);
+    }
+
+    free((void*)arguments.source_path); // manual path or from realpath(), free in any case
+    free((void*)g_mount_base_path);
 }
 
 static void signal_handler(int sig) {
