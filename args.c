@@ -1,4 +1,6 @@
 #include "util.h"
+#include <stdlib.h>
+#include <stdnoreturn.h>
 #include "args.h"
 
 #define ARG_NONE     no_argument
@@ -41,11 +43,13 @@ static const struct option long_options[] = {
 #define HELP_ITEM(short, long, var, has_arg, type, arg, help) \
     eprintf("  -%c, --%-"HELP_SPACE"s %s\n", short, long " " #arg, help);
 
-static inline void print_help(const char *prog) {
+static inline __attribute__((__noreturn__))
+void print_help(const char *prog) {
     eprintf("Usage: %s\n\n", prog);
     eprintf("Arguments:\n");
     eprintf("  -%c, --%-"HELP_SPACE"s %s\n", 'h', "help", "Show this help message and exit.");
-    ARGUMENT_LIST(HELP_ITEM)
+    ARGUMENT_LIST(HELP_ITEM);
+    exit(EXIT_FAILURE);
 }
 
 #undef HELP_ITEM
@@ -53,7 +57,7 @@ static inline void print_help(const char *prog) {
 
 
 
-static const char** parse_one_or_many_arg_values(int argc, char *argv[]) {
+static const char** parse_multiple_arg_values(int argc, char *argv[]) {
     uint args=0, arg_start = --optind;
     while (optind < argc && argv[optind][0] != '-') {
         optind++;
@@ -71,7 +75,7 @@ static const char** parse_one_or_many_arg_values(int argc, char *argv[]) {
 #define CASE_ARG_NONE true
 #define CASE_ARG_REQUIRED optarg
 #define CASE_ARG_OPTIONAL optarg
-#define CASE_ARG_MULTIPLE parse_one_or_many_arg_values(argc, argv)
+#define CASE_ARG_MULTIPLE parse_multiple_arg_values(argc, argv)
 
 #define PARSE_CASE(short, long, var, has_arg, type, arg, help) \
     case short : arguments->var = CASE_##has_arg; break;
@@ -84,14 +88,12 @@ void parse_args(int argc, char *argv[], Arguments *arguments) {
         switch (c) {
             case 'h':
                 print_help(argv[0]);
-                exit(EXIT_SUCCESS);
 
             ARGUMENT_LIST(PARSE_CASE)
 
             default:
             case '?':
-                fail("Try '%s --help' for more information.\n", argv[0]);
-                break;
+                print_help(argv[0]);
         }
     }
 }
