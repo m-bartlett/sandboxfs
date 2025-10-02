@@ -125,27 +125,24 @@ int create_sandbox(const char*  mount_name,
 
 
 bool cleanup_sandbox() {
-    bool unmount_successful = false;
+    bool cleanup_success = true;
 
     if (g_sandbox_pid > 0) { // Parent cleanup
         kill(g_sandbox_pid, SIGTERM);
 
         if (g_mount_point != NULL) {
-            if (umount2(g_mount_point, 0) == -1) {
-                eprintf("Failed to unmount %s: %s\n", g_mount_point, strerror(errno));
-            }
-            else {
-                unmount_successful = true;
-                if (g_verbose) printf("Unmounted %s\n", g_mount_point);
-            }
+            // mount shouldn't be visible to parent, but doesn't hurt to make sure it's unmounted
+            umount2(g_mount_point, 0);
             free(g_mount_point);
         }
     }
     else { // child cleanup
+        // This block is only reached if an error prevents getting to the exec call
+        free(g_mount_point);
         exit(EXIT_FAILURE);
     }
 
-    return unmount_successful;
+    return cleanup_success;
 }
 
 
