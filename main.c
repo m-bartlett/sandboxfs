@@ -93,7 +93,15 @@ int main(int argc, char *argv[]) {
         printf("Command: %s\n",           arguments.command);
         printf("Mount base path: %s\n",   g_mount_base_path);
         printf("Source path: %s", arguments.source_path);
-        printf("%s\n", g_source_is_ephemeral ? " (ephemeral)" : "");
+        if (g_source_is_ephemeral) {
+            puts(" (ephemeral)");
+            printf("\nEphemeral source directory created for this sandbox: %s\n"
+                   "It will be deleted automatically when this sandbox exits.\n"
+                   "Copy it outside of the staging directory %s before the sandbox terminates to"
+                   " preserve any filesystem mutations from within the sandbox.\n\n",
+                   arguments.source_path, g_mount_base_path);
+        }
+        else puts("");
         if (arguments.binds != NULL) {
             printf("Additional bind mounts:");
             const char* bind = NULL;
