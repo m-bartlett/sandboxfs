@@ -45,8 +45,7 @@ int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;
 
     if (geteuid() != 0) {
-        fail("ERROR: " APP_NAME
-             " does not have elevated privileges (required for mount operations).\n"
+        fail("FATAL: "APP_NAME" does not have elevated privileges required for mount operations.\n"
              "Executable should be owned by root with setuid bit enabed.\n")
     }
 
@@ -83,7 +82,7 @@ int main(int argc, char *argv[]) {
     mkdir_for_root(g_mount_base_path);
 
     if (arguments.source_path == NULL) {
-        arguments.source_path = auto_sprintf("%s/delta", g_mount_base_path);
+        arguments.source_path = auto_sprintf("%s/" EPHEMERAL_SOURCE_DIR_NAME, g_mount_base_path);
         g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
     }

@@ -25,6 +25,7 @@
 #define APP_BASE_DIR "/var/lib/" APP_NAME
 #endif
 
+#define EPHEMERAL_SOURCE_DIR_NAME "delta"
 
 #define auto_sprintf_stack(format, ...) ({ \
     const uint formatted_size = snprintf(NULL, 0, format __VA_OPT__(,) __VA_ARGS__); \
