@@ -6,6 +6,8 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
 
 
 bool g_verbose = false;
@@ -53,6 +55,13 @@ int main(int argc, char *argv[]) {
 
     if (arguments.mount_id == NULL) {
         arguments.mount_id = current_timestamp();
+    }
+    else {
+        char* bad_char=strpbrk(arguments.mount_id, "/\n");
+        if (bad_char != NULL) {
+            uint position = bad_char-arguments.mount_id;
+            fail("Illegal character in provided mount ID as position %d\n", position)
+        }
     }
 
     if (arguments.command == NULL) {

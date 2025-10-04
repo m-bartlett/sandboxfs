@@ -26,8 +26,14 @@ static const mount_t sandbox_mounts[] = {
     {"dev",    "/dev",     "devtmpfs",  MS_NOSUID,                "mode=0755"},
     {"devpts", "/dev/pts", "devpts",    MS_NOSUID|MS_NOEXEC,      "mode=0620"},
     {"shm",    "/dev/shm", "tmpfs",     MS_NOSUID|MS_NOEXEC,      "mode=1777"},
-    {"/tmp",   "/tmp",     NULL,        MS_SLAVE|MS_BIND|MS_REC , NULL},
     {"/run",   "/run",     NULL,        MS_SLAVE|MS_BIND|MS_REC , NULL},
+
+#ifdef NO_BIND_TMP
+    {"tmp",   "/tmp",     "tmpfs",      MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME, "mode=1777"},
+#else
+    {"/tmp",   "/tmp",     NULL,        MS_SLAVE|MS_BIND|MS_REC , NULL},
+#endif
+
 };
 static const uint mount_template_max_size = sizeof(SANDBOX_MOUNT_PATH_TEMPLATE"/dev/shm");
 
