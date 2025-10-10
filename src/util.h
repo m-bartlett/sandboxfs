@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -152,9 +153,9 @@ inline static void chdir_safe(const char* path) {
     }
 }
 
-inline static void chroot_safe(const char* path) {
-    if (chroot(path) != 0) {
-        fail("Chroot to %s failed: %s\n", path, strerror(errno));
+inline static void pivot_root_safe(const char* new_root) {
+    if (syscall(SYS_pivot_root, new_root, new_root) != 0) {
+        fail("Root pivot to %s failed: %s\n", new_root, strerror(errno));
     }
 }
 

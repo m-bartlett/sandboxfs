@@ -2,7 +2,6 @@
 #include "sandbox.h"
 #include "util.h"
 
-
 #include <sched.h>
 #include <sys/mount.h>
 #include <sys/wait.h>
@@ -98,8 +97,8 @@ int create_sandbox(const char*  mount_name,
 
         const char *pwd = getcwd(NULL, 0);
         chdir_safe(g_mount_point);
-        chroot_safe(g_mount_point);
-        chdir_safe(pwd); // Retain working directory within chroot
+        pivot_root_safe(g_mount_point);
+        chdir_safe(pwd); // Retain working directory within the new root
 
         // Hide overlay mount path from within itself
         mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, "mode=1755");
@@ -223,7 +222,7 @@ bool detect_sandbox() {
     if (s.st_ino != 2) {
         bool sandbox_mount_found = read_file_lines("/proc/mounts", detect_sandbox_mount_line);
         if (!sandbox_mount_found) {
-            fail("Running in a chroot but could not find " APP_NAME " mount, exitting.");
+            fail("Root mount is pivoted but could not find " APP_NAME " mount, exitting.");
         }
         return true;
     }
