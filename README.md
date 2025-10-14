@@ -21,6 +21,7 @@ Create a replica of the current machine's root filesystem with an overlay mount 
 > [!IMPORTANT]
 > This tool is **not** designed to be used for security. The primary use for this application is to help maintain filesystem cleaniness.
 > It does not focus on or prioritize effectively "jailing" applications. A purpose-built tool like [firejail](https://firejail.wordpress.com) should be used for such purposes.
+<br/>
 
 `sandboxfs` creates simplistic "containers" and works similarly to the likes of [arch-chroot](https://man.archlinux.org/man/arch-chroot.8) and [bubblewrap](https://github.com/containers/bubblewrap). The main difference is that its containers simulate running on the actual system but isolate filesystem changes.
 
@@ -36,7 +37,7 @@ This setup makes the child process use the overlay as its root, meaning we can r
 ## Build & Install
 ```sh
 cmake -S . -B ./build --fresh
-cmake --build  ./build  --target all -j$(( $(nproc) - 1 ))
+cmake --build ./build --target all -j$(( $(nproc) - 1 ))
 sudo cmake --install ./build
 ```
 
