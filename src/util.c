@@ -91,3 +91,64 @@ int remove_directory_recursive(const char *path) {
 
     return result;
 }
+
+bool has_cap_sys_admin() {
+    cap_t caps = cap_get_proc();
+    if (caps == NULL) {
+        return false;
+    }
+
+    cap_flag_value_t value;
+    if (cap_get_flag(caps, CAP_SYS_ADMIN, CAP_EFFECTIVE, &value) != 0) {
+        cap_free(caps);
+        return false;
+    }
+
+    cap_free(caps);
+    return value == CAP_SET;
+}
+
+void request_cap_sys_admin() {
+    cap_t caps = cap_get_proc();
+    if (caps == NULL) {
+        fail("Failed to get current capabilities: %s\n", strerror(errno));
+    }
+
+    cap_value_t cap_list[1] = { CAP_SYS_ADMIN };
+    
+    if (cap_set_flag(caps, CAP_EFFECTIVE, 1, cap_list, CAP_SET) != 0) {
+        cap_free(caps);
+        fail("Failed to set CAP_SYS_ADMIN in effective set: %s\n", strerror(errno));
+    }
+
+    if (cap_set_flag(caps, CAP_PERMITTED, 1, cap_list, CAP_SET) != 0) {
+        cap_free(caps);
+        fail("Failed to set CAP_SYS_ADMIN in permitted set: %s\n", strerror(errno));
+    }
+
+    if (cap_set_flag(caps, CAP_INHERITABLE, 1, cap_list, CAP_SET) != 0) {
+        cap_free(caps);
+        fail("Failed to set CAP_SYS_ADMIN in inheritable set: %s\n", strerror(errno));
+    }
+
+    if (cap_set_proc(caps) != 0) {
+        cap_free(caps);
+        fail("Failed to apply CAP_SYS_ADMIN capability: %s\n", strerror(errno));
+    }
+
+    cap_free(caps);
+}
+
+void drop_all_capabilities() {
+    cap_t caps = cap_init();
+    if (caps == NULL) {
+        fail("Failed to initialize empty capability set: %s\n", strerror(errno));
+    }
+
+    if (cap_set_proc(caps) != 0) {
+        cap_free(caps);
+        fail("Failed to drop all capabilities: %s\n", strerror(errno));
+    }
+
+    cap_free(caps);
+}

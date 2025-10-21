@@ -48,6 +48,9 @@ add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${SOURCE_DIR})
 
+# Link against libcap for capability management
+target_link_libraries(${PROJECT_NAME} cap)
+
 option(NO_BIND_TMP "Don't bind mount root /tmp into the sandbox's /tmp" OFF)
 
 if(NO_BIND_TMP)
@@ -63,18 +66,14 @@ install(PROGRAMS $<TARGET_FILE:${PROJECT_NAME}>
 
 install(CODE "
     execute_process(
-        COMMAND chown root:root \${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}
-    )
-    execute_process(
-        COMMAND chmod 4755 \${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}
+        COMMAND setcap cap_sys_admin+ep \${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}
     )
 ")
 
 add_custom_target(install-local
-    COMMAND chown root:root $<TARGET_FILE:${PROJECT_NAME}>
-    COMMAND chmod 4755 $<TARGET_FILE:${PROJECT_NAME}>
+    COMMAND setcap cap_sys_admin+ep $<TARGET_FILE:${PROJECT_NAME}>
     DEPENDS ${PROJECT_NAME}
-    COMMENT "Installing locally with setuid bit"
+    COMMENT "Installing locally with CAP_SYS_ADMIN capability"
 )
 
 add_custom_target(uninstall

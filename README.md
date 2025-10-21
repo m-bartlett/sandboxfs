@@ -41,7 +41,7 @@ cmake --build ./build --target all -j$(( $(nproc) - 1 ))
 sudo cmake --install ./build
 ```
 
-The resulting binary relies on being owned by the root user with the setuid bit enabled to allow non-root users to perform the necessary mount operations that requires elevated privileges to perform. Once the sandbox environment is created, the root privileges are shed and the resulting process runs as the user.
+The resulting binary uses Linux capabilities (`CAP_SYS_ADMIN`) to perform mount operations that require elevated privileges. The `setcap` command is used during installation to grant the binary the necessary capability. Once the sandbox environment is created, all capabilities are dropped before executing the user's command, ensuring the resulting process runs without elevated privileges.
 
 
 ## Use cases

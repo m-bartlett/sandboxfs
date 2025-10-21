@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/capability.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -115,8 +116,11 @@ inline static void chown_safe(const char* path, const uid_t uid, const gid_t gid
 }
 
 inline static void mkdir_for_user(const char* path, const uid_t uid, const gid_t gid) {
-    mkdir_safe(path);
-    chown_safe(path, uid, gid);
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        mkdir_safe(path);
+        chown_safe(path, uid, gid);
+    }
 }
 
 inline static void mkdir_for_caller(const char* path) {
@@ -165,6 +169,10 @@ bool read_file_lines(const char* filename, bool(*callback)(char*, uint));
 
 int remove_directory_recursive(const char *path);
 
+// Capability management functions
+bool has_cap_sys_admin();
+void request_cap_sys_admin();
+void drop_all_capabilities();
 
 
 #endif
