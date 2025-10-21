@@ -92,6 +92,22 @@ int remove_directory_recursive(const char *path) {
     return result;
 }
 
+bool has_cap_sys_admin() {
+    cap_t caps = cap_get_proc();
+    if (caps == NULL) {
+        return false;
+    }
+
+    cap_flag_value_t value;
+    if (cap_get_flag(caps, CAP_SYS_ADMIN, CAP_EFFECTIVE, &value) != 0) {
+        cap_free(caps);
+        return false;
+    }
+
+    cap_free(caps);
+    return value == CAP_SET;
+}
+
 void request_cap_sys_admin() {
     cap_t caps = cap_get_proc();
     if (caps == NULL) {

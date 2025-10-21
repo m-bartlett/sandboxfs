@@ -170,6 +170,7 @@ bool read_file_lines(const char* filename, bool(*callback)(char*, uint));
 int remove_directory_recursive(const char *path);
 
 // Capability management functions
+bool has_cap_sys_admin();
 void request_cap_sys_admin();
 void drop_all_capabilities();
 

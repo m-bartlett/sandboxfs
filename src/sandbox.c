@@ -48,85 +48,18 @@ int create_sandbox(const char*  mount_name,
     //malloc mount_point on heap so cleanup functions have access to it.
     g_mount_point = auto_sprintf(SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, "");
 
-    // Save real UID/GID before forking
-    uid_t uid = getuid();
-    gid_t gid = getgid();
-
-    // Create a pipe for synchronization between parent and child
-    int sync_pipe[2];
-    if (pipe(sync_pipe) != 0) {
-        fail("Failed to create sync pipe: %s\n", strerror(errno));
-    }
-
     g_sandbox_pid = fork();
 
     if (g_sandbox_pid == -1) {
         fail("Failed to fork process: %s\n", strerror(errno));
     }
     else if (g_sandbox_pid == 0) {
-        // Child process
-        close(sync_pipe[1]); // Close write end
 
-        // First, unshare only the user namespace
-        if (unshare(CLONE_NEWUSER) != 0) {
-            fail("User namespace unshare failed: %s\n", strerror(errno));
-        }
-
-        // Read UID/GID from parent
-        uid_t parent_uid, parent_gid;
-        if (read(sync_pipe[0], &parent_uid, sizeof(parent_uid)) != sizeof(parent_uid)) {
-            fail("Failed to read parent UID: %s\n", strerror(errno));
-        }
-        if (read(sync_pipe[0], &parent_gid, sizeof(parent_gid)) != sizeof(parent_gid)) {
-            fail("Failed to read parent GID: %s\n", strerror(errno));
-        }
-        close(sync_pipe[0]);
-
-        // Write our own uid/gid mappings
-        int fd = open("/proc/self/uid_map", O_WRONLY);
-        if (fd < 0) {
-            fail("Failed to open /proc/self/uid_map: %s\n", strerror(errno));
-        }
-        char buf[64];
-        int len = snprintf(buf, sizeof(buf), "0 %d 1\n", parent_uid);
-        if (write(fd, buf, len) < 0) {
-            fail("Failed to write uid_map: %s\n", strerror(errno));
-        }
-        close(fd);
-
-        // Disable setgroups
-        fd = open("/proc/self/setgroups", O_WRONLY);
-        if (fd >= 0) {
-            write(fd, "deny", 4);
-            close(fd);
-        }
-
-        // Write gid mapping
-        fd = open("/proc/self/gid_map", O_WRONLY);
-        if (fd < 0) {
-            fail("Failed to open /proc/self/gid_map: %s\n", strerror(errno));
-        }
-        len = snprintf(buf, sizeof(buf), "0 %d 1\n", parent_gid);
-        if (write(fd, buf, len) < 0) {
-            fail("Failed to write gid_map: %s\n", strerror(errno));
-        }
-        close(fd);
-
-        // Debug: check UID/GID after mapping
-        if (g_verbose) {
-            printf("After uid/gid mapping: UID=%d, GID=%d\n", getuid(), getgid());
-        }
-
-        // Now unshare the mount namespace
-        // This is required for unprivileged overlay mounts
         if (unshare(CLONE_NEWNS) != 0) {
-            fail("Mount namespace unshare failed: %s\n", strerror(errno));
+            fail("Unshare failed: %s\n", strerror(errno));
         }
 
-        // Request CAP_SYS_ADMIN capability explicitly for mount operations
-        // In a user namespace where we're mapped to root, we have all capabilities,
-        // but we explicitly request it to satisfy the requirement
-        request_cap_sys_admin();
+        mount_safe(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL);
 
         const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
         const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
@@ -170,8 +103,10 @@ int create_sandbox(const char*  mount_name,
         // Hide overlay mount path from within itself
         mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, "mode=1755");
                                                                 //TODO NULL options ^
-        // Drop all capabilities and shed privileges before exec
+        // Drop all capabilities before exec
         drop_all_capabilities();
+        
+        // Shed privileges before exec
         seteuid_safe(getuid());
         setegid_safe(getgid());
 
@@ -186,18 +121,6 @@ int create_sandbox(const char*  mount_name,
         fail("Exec failed: %s\n", strerror(errno));
     }
     else {
-        // Parent process
-        close(sync_pipe[0]); // Close read end
-
-        // Send UID/GID to child so it can write its own mappings
-        if (write(sync_pipe[1], &uid, sizeof(uid)) != sizeof(uid)) {
-            fail("Failed to send UID to child: %s\n", strerror(errno));
-        }
-        if (write(sync_pipe[1], &gid, sizeof(gid)) != sizeof(gid)) {
-            fail("Failed to send GID to child: %s\n", strerror(errno));
-        }
-        close(sync_pipe[1]);
-
         if (g_verbose) {
             printf("Sandbox PID: %d\n", g_sandbox_pid);
         }

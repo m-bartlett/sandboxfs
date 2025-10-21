@@ -66,14 +66,14 @@ install(PROGRAMS $<TARGET_FILE:${PROJECT_NAME}>
 
 install(CODE "
     execute_process(
-        COMMAND setcap cap_sys_admin,cap_setuid+ep \${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}
+        COMMAND setcap cap_sys_admin+ep \${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${PROJECT_NAME}
     )
 ")
 
 add_custom_target(install-local
-    COMMAND setcap cap_sys_admin,cap_setuid+ep $<TARGET_FILE:${PROJECT_NAME}>
+    COMMAND setcap cap_sys_admin+ep $<TARGET_FILE:${PROJECT_NAME}>
     DEPENDS ${PROJECT_NAME}
-    COMMENT "Installing locally with CAP_SYS_ADMIN and CAP_SETUID capabilities"
+    COMMENT "Installing locally with CAP_SYS_ADMIN capability"
 )
 
 add_custom_target(uninstall

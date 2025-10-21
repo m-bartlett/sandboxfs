@@ -45,6 +45,15 @@ static void signal_handler(int sig) {
 int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;
 
+    // Check if we have CAP_SYS_ADMIN capability for mount operations
+    if (!has_cap_sys_admin()) {
+        fail("FATAL: "APP_NAME" does not have CAP_SYS_ADMIN capability required for mount operations.\n"
+             "Run: sudo setcap cap_sys_admin+ep /path/to/" APP_NAME "\n")
+    }
+
+    // Request CAP_SYS_ADMIN capability for mount operations
+    request_cap_sys_admin();
+
     parse_args(argc, argv, &arguments);
     g_verbose = arguments.verbose;
 
