@@ -116,8 +116,11 @@ inline static void chown_safe(const char* path, const uid_t uid, const gid_t gid
 }
 
 inline static void mkdir_for_user(const char* path, const uid_t uid, const gid_t gid) {
-    mkdir_safe(path);
-    chown_safe(path, uid, gid);
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        mkdir_safe(path);
+        chown_safe(path, uid, gid);
+    }
 }
 
 inline static void mkdir_for_caller(const char* path) {

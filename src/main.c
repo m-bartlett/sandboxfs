@@ -45,9 +45,6 @@ static void signal_handler(int sig) {
 int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;
 
-    // Request CAP_SYS_ADMIN capability for mount operations
-    request_cap_sys_admin();
-
     parse_args(argc, argv, &arguments);
     g_verbose = arguments.verbose;
 
@@ -84,8 +81,8 @@ int main(int argc, char *argv[]) {
 
 
     g_mount_base_path = auto_sprintf(APP_BASE_DIR "/%s", arguments.mount_id);
-    mkdir_for_root(APP_BASE_DIR);
-    mkdir_for_root(g_mount_base_path);
+    mkdir_for_caller(APP_BASE_DIR);
+    mkdir_for_caller(g_mount_base_path);
 
     if (arguments.source_path == NULL) {
         arguments.source_path = auto_sprintf("%s/" EPHEMERAL_SOURCE_DIR_NAME, g_mount_base_path);

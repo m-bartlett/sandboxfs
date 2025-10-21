@@ -110,6 +110,11 @@ void request_cap_sys_admin() {
         fail("Failed to set CAP_SYS_ADMIN in permitted set: %s\n", strerror(errno));
     }
 
+    if (cap_set_flag(caps, CAP_INHERITABLE, 1, cap_list, CAP_SET) != 0) {
+        cap_free(caps);
+        fail("Failed to set CAP_SYS_ADMIN in inheritable set: %s\n", strerror(errno));
+    }
+
     if (cap_set_proc(caps) != 0) {
         cap_free(caps);
         fail("Failed to apply CAP_SYS_ADMIN capability: %s\n", strerror(errno));
