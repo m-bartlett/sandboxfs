@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/capability.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
@@ -165,6 +166,9 @@ bool read_file_lines(const char* filename, bool(*callback)(char*, uint));
 
 int remove_directory_recursive(const char *path);
 
+// Capability management functions
+void request_cap_sys_admin();
+void drop_all_capabilities();
 
 
 #endif

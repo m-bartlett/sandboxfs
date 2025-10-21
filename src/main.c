@@ -45,10 +45,8 @@ static void signal_handler(int sig) {
 int main(int argc, char *argv[]) {
     if (detect_sandbox()) return EXIT_SUCCESS;
 
-    if (geteuid() != 0) {
-        fail("FATAL: "APP_NAME" does not have elevated privileges required for mount operations.\n"
-             "Executable should be owned by root with setuid bit enabed.\n")
-    }
+    // Request CAP_SYS_ADMIN capability for mount operations
+    request_cap_sys_admin();
 
     parse_args(argc, argv, &arguments);
     g_verbose = arguments.verbose;

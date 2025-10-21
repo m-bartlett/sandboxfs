@@ -103,7 +103,8 @@ int create_sandbox(const char*  mount_name,
         // Hide overlay mount path from within itself
         mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, "mode=1755");
                                                                 //TODO NULL options ^
-        // Shed privileges before exec
+        // Drop all capabilities and shed privileges before exec
+        drop_all_capabilities();
         seteuid_safe(getuid());
         setegid_safe(getgid());
 
