@@ -26,7 +26,6 @@ static const mount_t sandbox_mounts[] = {
     {"devpts", "/dev/pts", "devpts",    MS_NOSUID|MS_NOEXEC,      "mode=0620"},
     {"shm",    "/dev/shm", "tmpfs",     MS_NOSUID|MS_NOEXEC,      "mode=1777"},
     {"/run",   "/run",     NULL,        MS_SLAVE|MS_BIND|MS_REC , NULL},
-
 #ifdef NO_BIND_TMP
     {"tmp",   "/tmp",     "tmpfs",      MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME, "mode=1777"},
 #else
@@ -98,10 +97,13 @@ int create_sandbox(const char*  mount_name,
         const char *pwd = getcwd(NULL, 0);
         chdir_safe(g_mount_point);
         pivot_root_safe(g_mount_point);
-        chdir_safe(pwd); // Retain working directory within the new root
+        if (umount2(".", MNT_DETACH) == -1) {
+            eprintf("Failed to umount new root '%s': %s\n", g_mount_point, strerror(errno));
+        }
+        chdir(pwd);
 
         // Hide overlay mount path from within itself
-        mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, "mode=1755");
+        mount_safe(NULL, (char*)mount_base_path, "tmpfs", MS_NOSUID|MS_NOEXEC, NULL);
                                                                 //TODO NULL options ^
         // Shed privileges before exec
         seteuid_safe(getuid());
