@@ -114,6 +114,11 @@ int create_sandbox(const char*  mount_name,
             fail("Error parsing provided command: %s\n", strerror(errno));
         }
 
+        // Set sandbox info env vars for the child process before exec
+        setenv("SANDBOXFS_ID",     strchr(mount_name, '-')+1, 1);
+        setenv("SANDBOXFS_SOURCE", source_path, 1);
+        setenv("SANDBOXFS_BASE",   mount_base_path, 1);
+
         execvp(command_words.we_wordv[0], command_words.we_wordv);
 
         wordfree(&command_words);
