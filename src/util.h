@@ -9,6 +9,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,11 +22,6 @@
 
 
 #define APP_NAME "sandboxfs"
-
-#ifndef APP_BASE_DIR
-#define APP_BASE_DIR "/var/lib/" APP_NAME
-#endif
-
 #define EPHEMERAL_SOURCE_DIR_NAME "delta"
 
 #define auto_sprintf_stack(format, ...) ({ \
@@ -47,6 +43,26 @@
     char *__path = alloca(__path_size); \
     snprintf(__path, __path_size, "%s" glue "%s", a, b); \
     __path; \
+})
+
+#define get_absolute_path_of_self() ({\
+    char _path[PATH_MAX]; \
+    ssize_t path_size = readlink("/proc/self/exe", _path, PATH_MAX);\
+    char *path = alloca(path_size+1);\
+    strncpy(path, _path, path_size);\
+    path[path_size]='\0';\
+    path;\
+})
+
+#define get_user_cache_path() ({\
+    char* cache_path = getenv("XDG_CACHE_HOME");\
+    if (cache_path == NULL || cache_path[0] == '\0') {\
+        struct passwd *passwdEnt = getpwuid(getuid());\
+        char *home_dir = passwdEnt->pw_dir;\
+        cache_path = alloca(strlen(home_dir)+sizeof("/.cache"));\
+        sprintf(cache_path, "%s/%s", home_dir, ".cache");\
+    }\
+    cache_path;\
 })
 
 
