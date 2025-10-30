@@ -75,6 +75,16 @@
 
 #define array_size(a) (sizeof(a)/sizeof(a[0]))
 
+
+void validate_directory(const char* path);
+
+int remove_directory_recursive(const char *path);
+
+void mkdir_nested(const char *path);
+
+bool read_file_lines(const char* filename, bool(*callback)(char*, uint));
+
+
 inline static const char* current_timestamp() {
     #define TIMESTAMPFMT "%Y-%m-%d-%H-%M-%S"
     #define TIMESTAMPFMTSZ 20
@@ -97,11 +107,6 @@ inline static void setegid_safe(const gid_t egid) {
     }
 }
 
-inline static void set_user_id_safe(const uid_t _id) {
-    seteuid_safe(_id);
-    setegid_safe(_id);
-}
-
 inline static struct stat stat_safe(const char* path) {
     struct stat st;
     if (stat(path, &st) != 0) {
@@ -119,6 +124,20 @@ inline static void mkdir_safe(const char* path) {
     }
 }
 
+inline static void mkdir_as_caller(const char* path) {
+    const uid_t current_euid = geteuid();
+    seteuid(getuid());
+    mkdir_safe(path);
+    seteuid(current_euid);
+}
+
+inline static void mkdir_nested_as_caller(const char* path) {
+    const uid_t current_euid = geteuid();
+    seteuid(getuid());
+    mkdir_nested(path);
+    seteuid(current_euid);
+}
+
 inline static void rmdir_safe(const char* path) {
     if (rmdir(path) == -1) {
         eprintf("Removing dir %s failed: %s\n", path, strerror(errno));
@@ -129,19 +148,6 @@ inline static void chown_safe(const char* path, const uid_t uid, const gid_t gid
     if (chown(path, uid, gid) != 0) {
         fail("Failed to chown %s to %d:%d:\n%s", path, uid, gid, strerror(errno));
     }
-}
-
-inline static void mkdir_for_user(const char* path, const uid_t uid, const gid_t gid) {
-    mkdir_safe(path);
-    chown_safe(path, uid, gid);
-}
-
-inline static void mkdir_for_caller(const char* path) {
-    mkdir_for_user(path, getuid(), getgid());
-}
-
-inline static void mkdir_for_root(const char* path) {
-    mkdir_for_user(path, 0, 0);
 }
 
 inline static int file_open_safe(const char* filename, int flags) {
@@ -175,13 +181,5 @@ inline static void pivot_root_safe(const char* new_root) {
         fail("Root pivot to %s failed: %s\n", new_root, strerror(errno));
     }
 }
-
-void validate_directory(const char* path);
-
-bool read_file_lines(const char* filename, bool(*callback)(char*, uint));
-
-int remove_directory_recursive(const char *path);
-
-
 
 #endif

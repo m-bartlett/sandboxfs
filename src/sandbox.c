@@ -63,8 +63,8 @@ int create_sandbox(const char*  mount_name,
         const char* mount_work_dir = auto_sprintf_stack("%s/work", mount_base_path);
         const char* overlay_options = auto_sprintf_stack("lowerdir=/,upperdir=%s,workdir=%s",
                                                           source_path, mount_work_dir);
-        mkdir_for_caller(g_mount_point);
-        mkdir_for_caller(mount_work_dir);
+        mkdir_as_caller(g_mount_point);
+        mkdir_as_caller(mount_work_dir);
         mount_safe(mount_name,
                    g_mount_point,
                    "overlay",
@@ -79,7 +79,7 @@ int create_sandbox(const char*  mount_name,
             mount_t m = sandbox_mounts[i];
             snprintf(path_buffer, max_path_size,
                      SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, m.dest);
-            mkdir_safe(path_buffer);
+            mkdir_as_caller(path_buffer);
             mount_safe(m.source, path_buffer, m.type, m.flags, (void*)m.data);
         }
 

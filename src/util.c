@@ -14,31 +14,24 @@ void validate_directory(const char* path) {
     }
 }
 
-bool read_file_lines(const char* filename, bool(*callback)(char*, uint)) {
-    int fd = file_open_safe(filename, O_RDONLY);
-    int line_size=0, read_size=0;
-    char c = 0;
-    bool callback_exit = false;
-    do {
-        if (c == '\n') {
-            lseek(fd, -line_size, SEEK_CUR);
-            char line[line_size];
-            line[--line_size] = 0;
-            read(fd, line, line_size);
-            if (callback(line, line_size)) {
-                callback_exit = true;
-                break;
-            }
-            line_size=0;
-            read(fd, line, 1);
-        }
-        read_size = read(fd, &c, 1);
-        line_size += read_size;
-    } while (read_size > 0);
-    file_close_safe(fd);
-    return callback_exit;
 
+
+void mkdir_nested(const char *path) {
+    char* _path = strdup_stack(path);
+    char *slash_position = _path;
+    char *string_index;
+    while ((string_index = strchr(slash_position, '/')) != NULL) {
+        if (string_index == slash_position) {
+            goto skip_slash; // ignore leading or consecutive slashes
+        }
+        *string_index = '\0';
+        mkdir_safe(_path);
+        *string_index = '/';
+        skip_slash: slash_position = string_index + 1;
+    }
+    mkdir_safe(_path);
 }
+
 
 
 inline static bool is_dot(const char* path) {
@@ -90,4 +83,31 @@ int remove_directory_recursive(const char *path) {
     }
 
     return result;
+}
+
+
+
+bool read_file_lines(const char* filename, bool(*callback)(char*, uint)) {
+    int fd = file_open_safe(filename, O_RDONLY);
+    int line_size=0, read_size=0;
+    char c = 0;
+    bool callback_exit = false;
+    do {
+        if (c == '\n') {
+            lseek(fd, -line_size, SEEK_CUR);
+            char line[line_size];
+            line[--line_size] = 0;
+            read(fd, line, line_size);
+            if (callback(line, line_size)) {
+                callback_exit = true;
+                break;
+            }
+            line_size=0;
+            read(fd, line, 1);
+        }
+        read_size = read(fd, &c, 1);
+        line_size += read_size;
+    } while (read_size > 0);
+    file_close_safe(fd);
+    return callback_exit;
 }
