@@ -31,12 +31,13 @@
     pointer; \
 })
 
-#define auto_sprintf(format, ...) ({ \
-    const uint formatted_size = snprintf(NULL, 0, format __VA_OPT__(,) __VA_ARGS__); \
-    char* pointer = malloc(formatted_size); \
-    snprintf(pointer, formatted_size+1, format __VA_OPT__(,) __VA_ARGS__); \
+#define strdup_stack(str) ({ \
+    const size_t str_size = strlen(str)+1; \
+    char* pointer = alloca(str_size); \
+    strncpy(pointer, str, str_size); \
     pointer; \
 })
+
 
 #define string_concat(a, glue, b) ({ \
     size_t __path_size = strlen(a) + strlen(b) + strlen(glue) + 1; \

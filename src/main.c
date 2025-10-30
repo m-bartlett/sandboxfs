@@ -12,7 +12,7 @@
 
 bool g_verbose = false;
 bool g_source_is_ephemeral = false;
-const char* g_mount_base_path;
+char* g_mount_base_path;
 
 
 static argument_t arguments = { NULL };
@@ -86,14 +86,16 @@ int main(int argc, char *argv[]) {
 
     const char* user_cache_path = get_user_cache_path();
     const char* app_base_path = auto_sprintf_stack("%s/%s", user_cache_path, APP_NAME);
-    g_mount_base_path = auto_sprintf("%s/%s", app_base_path, arguments.mount_id);
     // mkdir_for_root(APP_BASE_DIR);
     // mkdir_for_root(g_mount_base_path);chocho
     mkdir_for_caller(app_base_path);
     mkdir_for_caller(g_mount_base_path);
+    asprintf(&g_mount_base_path, "%s/%s", app_base_path, arguments.mount_id);
 
     if (arguments.source_path == NULL) {
-        arguments.source_path = auto_sprintf("%s/" EPHEMERAL_SOURCE_DIR_NAME, g_mount_base_path);
+        asprintf((char**)&arguments.source_path,
+                 "%s/" EPHEMERAL_SOURCE_DIR_NAME,
+                 g_mount_base_path);
         g_source_is_ephemeral = true;
         mkdir_for_caller(arguments.source_path);
     }

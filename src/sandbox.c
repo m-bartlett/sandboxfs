@@ -45,7 +45,7 @@ int create_sandbox(const char*  mount_name,
     validate_directory(source_path);
 
     //malloc mount_point on heap so cleanup functions have access to it.
-    g_mount_point = auto_sprintf(SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, "");
+    asprintf(&g_mount_point, SANDBOX_MOUNT_PATH_TEMPLATE, mount_base_path, "");
 
     g_sandbox_pid = fork();
 
