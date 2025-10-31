@@ -2,7 +2,7 @@
 <table>
   <th>
     <h3>&nbsp;&nbsp;sandboxFS&nbsp;&nbsp;</h3>
-    <img align="center"  width="75" alt="sandboxfs logo" src="https://github.com/user-attachments/assets/3f2438e5-f4b6-4a97-9842-7fbe0f221a90" />
+    <img align="center"  width="75" alt="sandboxfs logo" src="https://github.com/user-attachments/assets/413071d5-6dc4-432a-90f1-4ff842ccedab" />
     <br/>
     <br/>
   </th>
