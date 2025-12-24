@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         char* bad_char=strpbrk(arguments.mount_id, "/\n");
         if (bad_char != NULL) {
             uint position = bad_char-arguments.mount_id;
-            fail("Illegal character in provided mount ID as position %d\n", position)
+            fail("Illegal character in provided mount ID at position %d\n", position)
         }
     }
 
