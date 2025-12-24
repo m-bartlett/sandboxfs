@@ -1,18 +1,14 @@
-
-<table>
-  <th>
-    <h3>&nbsp;&nbsp;sandboxFS&nbsp;&nbsp;</h3>
-    <img align="center"
-         width="100"
+<p align="center">
+<img align="center"
+         width="700"
          alt="sandboxfs logo"
-         src="https://github.com/user-attachments/assets/b41be1be-18c4-4d90-bb0d-6c3199db4459"
+         src="https://github.com/user-attachments/assets/f801ce9e-a9fc-4266-a31a-2766e0ce1cc9"
       />
-    <br/>
-    <br/>
-  </th>
-<td>
-<p>
+</p>
 
+---
+
+<p>
           
 Create a replica of the current machine's root filesystem with an overlay mount that isolates filesystem mutations. The goal of this tool is to help users maintain a tidy file system. See [use cases](use-cases) for examples of how this tool can be used effectively.
         
