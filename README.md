@@ -1,6 +1,6 @@
 <p align="center">
 <img align="center"
-         width="700"
+         width="600"
          alt="sandboxfs logo"
          src="https://github.com/user-attachments/assets/f801ce9e-a9fc-4266-a31a-2766e0ce1cc9"
       />
